@@ -47,7 +47,7 @@ export default async (bahasaNusa, m) => {
     if (userInput === 'daftar') {
         // Mulai pendaftaran acara
         userSessions.set(sender, { step: 'ask_event_name', eventData: {} });
-        return bahasaNusaReply(`${mess.welcome}\n\n> Untuk membatalkan proses pendaftarkan, ketikkan "batal".`);
+        return bahasaNusaReply(`${mess.welcome}\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
     }
     if (userInput === 'menu') {
         // Tampilkan menu utama
@@ -69,7 +69,7 @@ export default async (bahasaNusa, m) => {
 • Link Viewer Subtitle untuk penonton
 • Dashboard terintegrasi
 
-*Untuk membatalkan proses pendaftarkan, ketikkan "batal".*
+*Untuk membatalkan proses pendaftaran, ketikkan "batal".*
 *Butuh bantuan lebih lanjut? Ketik "kontak"*`);
     }
 
@@ -89,18 +89,18 @@ export default async (bahasaNusa, m) => {
             userSession.eventData.name = body;
             userSession.step = 'ask_location';
             userSessions.set(sender, userSession);
-            return bahasaNusaReply(`*Lokasi acara "${body}" di mana?*\n\n_Contoh: Gedung Serbaguna, Jakarta_\n\n> Untuk membatalkan proses pendaftarkan, ketikkan "batal".`);
+            return bahasaNusaReply(`*Lokasi acara "${body}" di mana?*\n\n_Contoh: Gedung Serbaguna, Jakarta_\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
 
         case 'ask_location':
             userSession.eventData.location = body;
             userSession.step = 'ask_date_time';
             userSessions.set(sender, userSession);
-            return bahasaNusaReply(`*Kapan acara ini akan berlangsung?*\nFormat: DD/MM/YYYY HH:MM\n\n_Contoh: 15/12/2024 19:00_\n\n> Untuk membatalkan proses pendaftarkan, ketikkan "batal".`);
+            return bahasaNusaReply(`*Kapan acara ini akan berlangsung?*\nFormat: DD/MM/YYYY HH:MM\n\n_Contoh: 15/12/2024 19:00_\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
 
         case 'ask_date_time':
             const dateTimeMatch = body.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
             if (!dateTimeMatch) {
-                return bahasaNusaReply(`*Format tanggal dan waktu tidak valid.*\n\nSilakan gunakan format: DD/MM/YYYY HH:MM\n_Contoh: 15/12/2024 19:00_\n> Untuk membatalkan proses pendaftarkan, ketikkan "batal".`);
+                return bahasaNusaReply(`*Format tanggal dan waktu tidak valid.*\n\nSilakan gunakan format: DD/MM/YYYY HH:MM\n_Contoh: 15/12/2024 19:00_\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
             }
             // Validasi tanggal dan jam tidak boleh lebih awal dari sekarang
             const [dateStrInput, timeStrInput] = body.split(' ');
@@ -113,27 +113,27 @@ export default async (bahasaNusa, m) => {
             const inputDate = new Date(`${yearInput}-${monthInput}-${dayInput}T${hourInput}:${minuteInput}:00`);
             const now = new Date();
             if (inputDate < now) {
-                return bahasaNusaReply(`*Tanggal dan jam acara tidak boleh lebih awal dari sekarang.*\nSilakan masukkan tanggal dan jam yang valid.\n_Contoh: 15/12/2024 19:00_\n\n> Untuk membatalkan proses pendaftarkan, ketikkan "batal".`);
+                return bahasaNusaReply(`*Tanggal dan jam acara tidak boleh lebih awal dari sekarang.*\nSilakan masukkan tanggal dan jam yang valid.\n_Contoh: 15/12/2024 19:00_\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
             }
             userSession.eventData.dateTime = body;
             userSession.step = 'ask_duration';
             userSessions.set(sender, userSession);
-            return bahasaNusaReply(`*Estimasi durasi acara (dalam menit)?*\n_Contoh: 120_\n\n> Untuk membatalkan proses pendaftarkan, ketikkan "batal".`);
+            return bahasaNusaReply(`*Estimasi durasi acara (dalam menit)?*\n_Contoh: 120_\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
 
         case 'ask_duration':
             const duration = parseInt(body);
             if (isNaN(duration) || duration <= 0) {
-                return bahasaNusaReply(`*Mohon masukkan durasi dalam angka (menit).*\n\n> Untuk membatalkan proses pendaftarkan, ketikkan "batal".`);
+                return bahasaNusaReply(`*Mohon masukkan durasi dalam angka (menit).*\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
             }
             userSession.eventData.duration = duration;
             userSession.step = 'ask_language';
             userSessions.set(sender, userSession);
             // Tampilkan pilihan bahasa
-            let langMsg = '*Pilih bahasa yang digunakan untuk subtitle:*\n';
+            let langMsg = '*Pilih bahasa yang digunakan untuk audio input:*\n';
             languages.forEach((lang, idx) => {
                 langMsg += `${idx + 1}. ${lang.namaBahasa}\n`;
             });
-            langMsg += '\nKetik angka sesuai pilihan Anda.\n_Contoh: 1_';
+            langMsg += '\nKetik angka sesuai pilihan Anda.\n_Contoh: 1_\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".';
             return bahasaNusaReply(langMsg);
 
         case 'ask_language':
@@ -144,65 +144,104 @@ export default async (bahasaNusa, m) => {
             userSession.eventData.kodeBahasa = languages[langIdx].kodeBahasa;
             userSession.step = 'ask_payment_model';
             userSessions.set(sender, userSession);
-            return bahasaNusaReply(`*Siapa yang akan menanggung biaya subtitle?*\n\n1️⃣ Penyelenggara (flat fee)\n2️⃣ Penonton (pay per view)\n\n> Untuk membatalkan proses pendaftarkan, ketikkan "batal".`);
+            return bahasaNusaReply(`*Siapa yang akan menanggung biaya subtitle?*\n\n1️⃣ Penyelenggara (flat fee)\n2️⃣ Penonton (pay per view)\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
 
         case 'ask_payment_model':
             if (!['1', '2'].includes(body)) {
-                return bahasaNusaReply(`*Pilihan tidak valid. Silakan pilih:*\n\n1️⃣ Penyelenggara (flat fee)\n2️⃣ Penonton (pay per view)\n\n> Untuk membatalkan proses pendaftarkan, ketikkan "batal".`);
+                return bahasaNusaReply(`*Pilihan tidak valid. Silakan pilih:*\n\n1️⃣ Penyelenggara (flat fee)\n2️⃣ Penonton (pay per view)\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
             }
-            // Set model dan biaya menggunakan enum dan konstanta dari enums.js
             userSession.eventData.tipePembayaran = body === '1' ? TipePembayaranAcara.PENYELENGGARA : TipePembayaranAcara.PENONTON;
             userSession.eventData.biayaPenyelenggara = body === '1' ? BIAYA_PENYELENGGARA : 0.0;
             userSession.eventData.biayaPenonton = body === '2' ? BIAYA_PENONTON : 0.0;
             userSession.eventData.biayaTelahDibayarPenyelenggara = null;
             userSession.eventData.statusPembayaran = 'PENDING';
-            // Generate event details dan id acara
-            const eventId = cuid();
-            const viewerCode = `${eventId}y`;
-            const penyelenggaraCode = `${eventId}w`;
-            const password = generatePassword();
-            const links = generateLinks(eventId);
-            // Parse tanggal_acara ke format ISO
-            const [dateStrEvent, timeStrEvent] = userSession.eventData.dateTime.split(' ');
-            let [dayEvent, monthEvent, yearEvent] = dateStrEvent.split('/');
-            let [hourEvent, minuteEvent] = timeStrEvent.split(':');
-            // Zero pad values to ensure valid date
-            dayEvent = dayEvent.padStart(2, '0');
-            monthEvent = monthEvent.padStart(2, '0');
-            hourEvent = hourEvent.padStart(2, '0');
-            minuteEvent = minuteEvent.padStart(2, '0');
-            const isoDate = new Date(`${yearEvent}-${monthEvent}-${dayEvent}T${hourEvent}:${minuteEvent}:00`).toISOString();
-            // Simpan/cek user
-            const userRow = await saveUserIfNotExists({
-                noHp: sender,
-                namaPenyelenggara: pushname,
-                password: password
-            });
-            // Simpan data ke database
-            await saveEventToDatabase({
-                id: eventId,
-                nama_acara: userSession.eventData.name,
-                lokasi_acara: userSession.eventData.location,
-                tanggal_acara: isoDate,
-                status: 'BELUM_MULAI',
-                tipe_pembayaran: userSession.eventData.tipePembayaran,
-                user_id: userRow.id,
-                estimasi_durasi_menit: userSession.eventData.duration,
-                kode_bahasa: userSession.eventData.kodeBahasa,
-                random_viewer_kode: viewerCode,
-                random_penyelenggara_kode: penyelenggaraCode,
-                status_pembayaran: userSession.eventData.statusPembayaran,
-                biaya_penyelenggara: userSession.eventData.biayaPenyelenggara,
-                biaya_telah_dibayar_penyelenggara: userSession.eventData.biayaTelahDibayarPenyelenggara,
-                biaya_penonton: userSession.eventData.biayaPenonton,
-                created_at: new Date(),
-                updated_at: new Date()
-            });
-            // Final summary
-            const summary = `${mess.eventRegistered}\n\n*Nama Acara:* ${userSession.eventData.name}\n*Lokasi:* ${userSession.eventData.location}\n*Waktu:* ${formatDateTime(dateStr, timeStr)}\n*Durasi:* ${userSession.eventData.duration} menit\n*Bahasa:* ${languages.find(l => l.kodeBahasa === userSession.eventData.kodeBahasa)?.namaBahasa}\n*Model:* ${userSession.eventData.tipePembayaran}\n*Harga/penonton:* ${userSession.eventData.biayaPenonton > 0 ? 'Rp ' + userSession.eventData.biayaPenonton : '-'}\n*Biaya Penyelenggara:* ${userSession.eventData.biayaPenyelenggara > 0 ? 'Rp ' + userSession.eventData.biayaPenyelenggara : '-'}\n*Status Pembayaran:* ${userSession.eventData.statusPembayaran}\n\n🔗 *Link Anda:*\n\n🎤 *Audio Input (Penyelenggara)*\n${links.audioInput}\n\n👁️ *Viewer Subtitle (Penonton)*\n${links.viewerSubtitle}\n\n🔐 *Password Dashboard:*\n*${password}*\n\nGunakan password ini untuk login ke dashboard penyelenggara`;
-            // Reset user session
-            userSessions.delete(sender);
-            return bahasaNusaReply(summary);
+            userSession.step = 'konfirmasi_data';
+            userSessions.set(sender, userSession);
+
+            const recapMsg = `*🔍 Konfirmasi Data Acara*\n\n` +
+                `*Nama Acara:* ${userSession.eventData.name}\n` +
+                `*Lokasi:* ${userSession.eventData.location}\n` +
+                `*Waktu:* ${userSession.eventData.dateTime}\n` +
+                `*Durasi:* ${userSession.eventData.duration} menit\n` +
+                `*Bahasa:* ${(languages.find(l => l.kodeBahasa === userSession.eventData.kodeBahasa) || {}).namaBahasa || '-'}\n` +
+                `*Model Pembayaran:* ${userSession.eventData.tipePembayaran}\n` +
+                `*Biaya Penonton:* ${userSession.eventData.biayaPenonton > 0 ? 'Rp ' + userSession.eventData.biayaPenonton.toLocaleString() : '-'}\n` +
+                `*Biaya Penyelenggara:* ${userSession.eventData.biayaPenyelenggara > 0 ? 'Rp ' + userSession.eventData.biayaPenyelenggara.toLocaleString() : '-'}\n\n` +
+                `*Apakah data sudah benar?*
+1️⃣ Sudah benar
+2️⃣ Perbaiki data
+
+Ketik angka sesuai pilihan Anda.`;
+            return bahasaNusaReply(recapMsg);
+
+        case 'konfirmasi_data':
+            if (['1', '2'].includes(body)) {
+                if (body === '1') {
+                    // Generate event details dan id acara
+                    const eventId = cuid();
+                    const viewerCode = `${eventId}y`;
+                    const penyelenggaraCode = `${eventId}w`;
+                    const password = generatePassword();
+                    const links = generateLinks(eventId);
+                    // Parse tanggal_acara ke format ISO
+                    const [dateStrEvent, timeStrEvent] = userSession.eventData.dateTime.split(' ');
+                    let [dayEvent, monthEvent, yearEvent] = dateStrEvent.split('/');
+                    let [hourEvent, minuteEvent] = timeStrEvent.split(':');
+                    dayEvent = dayEvent.padStart(2, '0');
+                    monthEvent = monthEvent.padStart(2, '0');
+                    hourEvent = hourEvent.padStart(2, '0');
+                    minuteEvent = minuteEvent.padStart(2, '0');
+                    const isoDate = new Date(`${yearEvent}-${monthEvent}-${dayEvent}T${hourEvent}:${minuteEvent}:00`).toISOString();
+                    // Simpan/cek user
+                    const userRow = await saveUserIfNotExists({
+                        noHp: sender,
+                        namaPenyelenggara: pushname,
+                        password: password
+                    });
+                    // Simpan data ke database
+                    await saveEventToDatabase({
+                        id: eventId,
+                        nama_acara: userSession.eventData.name,
+                        lokasi_acara: userSession.eventData.location,
+                        tanggal_acara: isoDate,
+                        status: 'BELUM_MULAI',
+                        tipe_pembayaran: userSession.eventData.tipePembayaran,
+                        user_id: userRow.id,
+                        estimasi_durasi_menit: userSession.eventData.duration,
+                        kode_bahasa: userSession.eventData.kodeBahasa,
+                        random_viewer_kode: viewerCode,
+                        random_penyelenggara_kode: penyelenggaraCode,
+                        status_pembayaran: userSession.eventData.statusPembayaran,
+                        biaya_penyelenggara: userSession.eventData.biayaPenyelenggara,
+                        biaya_telah_dibayar_penyelenggara: userSession.eventData.biayaTelahDibayarPenyelenggara,
+                        biaya_penonton: userSession.eventData.biayaPenonton,
+                        created_at: new Date(),
+                        updated_at: new Date()
+                    });
+                    // Final summary
+                    const summary = `🎉 *Sempuarna. Acara Berhasil Didaftarkan!*\n\n` +
+                        `* Nama Acara:* ${userSession.eventData.name}\n` +
+                        `*Lokasi:* ${userSession.eventData.location}\n` +
+                        `*Waktu:* ${userSession.eventData.dateTime}\n` +
+                        `*Durasi:* ${userSession.eventData.duration} menit\n` +
+                        `*Bahasa:* ${(languages.find(l => l.kodeBahasa === userSession.eventData.kodeBahasa) || {}).namaBahasa || '-'}\n` +
+                        `*Model:* ${userSession.eventData.tipePembayaran}\n` +
+                        `*Harga/penonton:* ${userSession.eventData.biayaPenonton > 0 ? 'Rp ' + userSession.eventData.biayaPenonton.toLocaleString() : '-'}\n` +
+                        `*Biaya Penyelenggara:* ${userSession.eventData.biayaPenyelenggara > 0 ? 'Rp ' + userSession.eventData.biayaPenyelenggara.toLocaleString() : '-'}\n` +
+                        `🔗 *Link Anda:*\n\n` +
+                        `🎤 *Audio Input (Penyelenggara)*\n${links.audioInput}\n\n` +
+                        `👁️ *Viewer Subtitle (Penonton)*\n${links.viewerSubtitle}\n\n` +
+                        `🔐 *Password Dashboard:*\n*${password}*\n\n` +
+                        `Gunakan password ini untuk login ke dashboard penyelenggara`;
+                    userSessions.delete(sender);
+                    return bahasaNusaReply(summary);
+                } else if (body === '2') {
+                    userSessions.set(sender, { step: 'ask_event_name', eventData: {} });
+                    return bahasaNusaReply('Baik, mari kita mulai dari awal.\n\n*Apa nama acara yang akan diselenggarakan?*\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".');
+                }
+            } else {
+                return bahasaNusaReply('Pilihan tidak valid. Silakan ketik 1 untuk konfirmasi, atau 2 untuk perbaiki data.');
+            }
 
         default:
             // Jika user mengirim pesan di luar flow
