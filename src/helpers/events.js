@@ -1,6 +1,7 @@
-import pkg from 'pg';
-import dotenv from 'dotenv';
 
+import dotenv from 'dotenv';
+import pkg from 'pg';
+import bcrypt from 'bcrypt';
 
 dotenv.config();
 
@@ -12,6 +13,49 @@ const pool = new Pool({
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT,
 });
+
+/**
+ * Hash password menggunakan bcrypt
+ * @param {string} password
+ * @returns {Promise<string>} hash
+ */
+async function hashPassword(password) {
+    const saltRounds = 10;
+    return await bcrypt.hash(password, saltRounds);
+}
+
+/**
+ * Cek dan simpan user ke database jika belum ada
+ * @param {object} userData - { noHp, namaPenyelenggara, password }
+ * @returns {object} user row
+ */
+export async function saveUserIfNotExists(userData) {
+    // Cek apakah user sudah ada
+    const checkSql = 'SELECT * FROM "user" WHERE no_hp = $1';
+    const checkResult = await pool.query(checkSql, [userData.noHp]);
+    if (checkResult.rows.length > 0) {
+        return checkResult.rows[0];
+    }
+
+    // Hash password dashboard dengan bcrypt
+    const passwordHash = await hashPassword(userData.password);
+
+    // Insert user baru
+    const insertSql = `
+        INSERT INTO "user" (
+            no_hp, password_hash, nama_penyelenggara, created_at, updated_at
+        ) VALUES (
+            $1, $2, $3, NOW(), NOW()
+        ) RETURNING *
+    `;
+    const insertValues = [
+        userData.noHp,
+        passwordHash,
+        userData.namaPenyelenggara
+    ];
+    const insertResult = await pool.query(insertSql, insertValues);
+    return insertResult.rows[0];
+}
 
 /**
  * Save event data to database
