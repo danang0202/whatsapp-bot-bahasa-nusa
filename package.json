@@ -5,11 +5,18 @@
     "description": "BahasaNusa Bot WhatsApp",
     "main": "index.js",
     "scripts": {
-        "authhor": "BahasaNusa",
-        "license": "MIT",
-        "start": "node ./index.js"
+        "start": "node ./index.js",
+        "validate": "node validate-env.js",
+        "setup": "node validate-env.js && npm run test:llm",
+        "test:llm": "node test-llm-factory.js",
+        "example:llm": "node examples-llm-factory.js",
+        "test:bot": "node test-llm-validation.js"
     },
+    "author": "BahasaNusa",
+    "license": "MIT",
     "dependencies": {
+        "@ai-sdk/openai": "^2.0.72",
+        "ai": "^5.0.101",
         "axios": "^1.4.0",
         "baileys": "^6.7.21",
         "bcrypt": "^6.0.0",

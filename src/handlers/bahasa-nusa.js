@@ -4,7 +4,7 @@ import { saveEventToDatabase, saveUserIfNotExists, generatePassword, generateLin
 import cuid from 'cuid';
 import { languages } from '../helpers/enums.js';
 import { TipePembayaranAcara, BIAYA_PENYELENGGARA, BIAYA_PENONTON } from '../helpers/enums.js';
-import OllamaClient from '../services/ollama/ollama-client.js';
+import LLMFactory from '../services/llm/llm-factory.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -12,8 +12,8 @@ dotenv.config();
 // State management untuk user sessions
 const userSessions = new Map();
 
-// Initialize Ollama client
-const ollama = new OllamaClient();
+// Initialize LLM client dengan factory pattern
+const llm = LLMFactory;
 
 export default async (bahasaNusa, m) => {
     // Ambil nomor WhatsApp dari .env
@@ -30,9 +30,12 @@ export default async (bahasaNusa, m) => {
 
     // Helper function for LLM validation with retry logic
     const validateAndProcessInput = async (input, step) => {
-        const ollamaAvailable = await ollama.isAvailable();
-        if (!ollamaAvailable) {
-            console.warn(`[Validation] Ollama not available, using fallback validation for ${step}`);
+        try {
+            // Check availability of best provider
+            const bestProvider = await llm.getBestAvailableProvider();
+            console.log(`[LLM] Using provider: ${bestProvider}`);
+        } catch (error) {
+            console.warn(`[Validation] No LLM provider available, using fallback validation for ${step}`);
             return {
                 isValid: input.trim().length > 2,
                 value: input.trim(),
@@ -46,13 +49,10 @@ export default async (bahasaNusa, m) => {
             switch (step) {
                 case 'ask_event_name':
                     console.log(`[LLM] Extracting event name from: "${input}"`);
-                    const nameResult = await ollama.extractEventName(input);
+                    const nameResult = await llm.extractEventName(input);
 
-                    // Check if extraction is meaningful and specific enough
-                    const extractionWorked = nameResult.extracted !== input.trim() || nameResult.confidence > 0.8;
-                    const isSpecificName = nameResult.extracted.length > 5 && !['acara', 'event', 'pertunjukan'].includes(nameResult.extracted.toLowerCase());
-
-                    if (extractionWorked && isSpecificName) {
+                    // Check validation result
+                    if (nameResult.isValid) {
                         console.log(`[LLM] ✅ Event name: "${nameResult.extracted}" (${Math.round(nameResult.confidence * 100)}%)`);
                         return {
                             isValid: true,
@@ -72,13 +72,10 @@ export default async (bahasaNusa, m) => {
 
                 case 'ask_location':
                     console.log(`[LLM] Extracting location from: "${input}"`);
-                    const locationResult = await ollama.extractLocation(input);
+                    const locationResult = await llm.extractLocation(input);
 
-                    // Check if extraction is meaningful and specific enough
-                    const locationWorked = locationResult.extracted !== input.trim() || locationResult.confidence > 0.8;
-                    const isSpecificLocation = locationResult.extracted.length > 4 && !['sana', 'sini', 'tempat', 'lokasi'].includes(locationResult.extracted.toLowerCase());
-
-                    if (locationWorked && isSpecificLocation) {
+                    // Check validation result
+                    if (locationResult.isValid) {
                         console.log(`[LLM] ✅ Location: "${locationResult.extracted}" (${Math.round(locationResult.confidence * 100)}%)`);
                         return {
                             isValid: true,
@@ -98,7 +95,7 @@ export default async (bahasaNusa, m) => {
 
                 case 'ask_date_time':
                     console.log(`[LLM] Validating datetime from: "${input}"`);
-                    const dateTimeResult = await ollama.validateDateTime(input);
+                    const dateTimeResult = await llm.validateDateTime(input);
 
                     if (dateTimeResult.success) {
                         console.log(`[LLM] ✅ DateTime: "${dateTimeResult.extracted}" (${Math.round(dateTimeResult.confidence * 100)}%)`);
