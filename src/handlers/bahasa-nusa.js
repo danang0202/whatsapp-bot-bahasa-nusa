@@ -115,6 +115,95 @@ export default async (bahasaNusa, m) => {
                         };
                     }
 
+                case 'ask_duration':
+                    console.log(`[LLM] Extracting duration from: "${input}"`);
+                    const durationResult = await llm.extractDuration(input);
+
+                    if (durationResult.success) {
+                        console.log(`[LLM] ✅ Duration: ${durationResult.durationMinutes} menit (${Math.round(durationResult.confidence * 100)}%)`);
+                        return {
+                            isValid: true,
+                            value: durationResult.durationMinutes,
+                            confidence: durationResult.confidence,
+                            originalInput: input
+                        };
+                    } else {
+                        console.log(`[LLM] ❌ Duration extraction failed: ${durationResult.error}`);
+                        return {
+                            isValid: false,
+                            value: input,
+                            confidence: durationResult.confidence,
+                            error: durationResult.error || 'Durasi tidak dapat dipahami. Contoh: "1 jam setengah", "2 jam 15 menit", "90 menit"'
+                        };
+                    }
+
+                case 'ask_language':
+                    console.log(`[LLM] Parsing language selection from: "${input}"`);
+                    const languageResult = await llm.parseLanguageSelection(input, languages);
+
+                    if (languageResult.success) {
+                        console.log(`[LLM] ✅ Language: ${languageResult.languageName} (${languageResult.languageCode}) (${Math.round(languageResult.confidence * 100)}%)`);
+                        return {
+                            isValid: true,
+                            value: languageResult.languageCode,
+                            displayName: languageResult.languageName,
+                            confidence: languageResult.confidence,
+                            originalInput: input
+                        };
+                    } else {
+                        console.log(`[LLM] ❌ Language parsing failed: ${languageResult.error}`);
+                        return {
+                            isValid: false,
+                            value: input,
+                            confidence: languageResult.confidence,
+                            error: languageResult.error || 'Pilihan bahasa tidak dikenali. Contoh: "1", "bahasa jawa", "indonesia"'
+                        };
+                    }
+
+                case 'ask_payment_model':
+                    console.log(`[LLM] Parsing payment selection from: "${input}"`);
+                    const paymentResult = await llm.parsePaymentSelection(input);
+
+                    if (paymentResult.success) {
+                        console.log(`[LLM] ✅ Payment: ${paymentResult.paymentType} (${Math.round(paymentResult.confidence * 100)}%)`);
+                        return {
+                            isValid: true,
+                            value: paymentResult.paymentType,
+                            confidence: paymentResult.confidence,
+                            originalInput: input
+                        };
+                    } else {
+                        console.log(`[LLM] ❌ Payment parsing failed: ${paymentResult.error}`);
+                        return {
+                            isValid: false,
+                            value: input,
+                            confidence: paymentResult.confidence,
+                            error: paymentResult.error || 'Pilihan pembayaran tidak dikenali. Contoh: "1", "penyelenggara", "penonton"'
+                        };
+                    }
+
+                case 'konfirmasi_data':
+                    console.log(`[LLM] Parsing confirmation from: "${input}"`);
+                    const confirmationResult = await llm.parseConfirmation(input);
+
+                    if (confirmationResult.success) {
+                        console.log(`[LLM] ✅ Confirmation: ${confirmationResult.confirmed ? 'Ya' : 'Tidak'} (${Math.round(confirmationResult.confidence * 100)}%)`);
+                        return {
+                            isValid: true,
+                            value: confirmationResult.confirmed,
+                            confidence: confirmationResult.confidence,
+                            originalInput: input
+                        };
+                    } else {
+                        console.log(`[LLM] ❌ Confirmation parsing failed: ${confirmationResult.error}`);
+                        return {
+                            isValid: false,
+                            value: input,
+                            confidence: confirmationResult.confidence,
+                            error: confirmationResult.error || 'Konfirmasi tidak dikenali. Contoh: "ya", "benar", "sudah", "tidak", "perbaiki"'
+                        };
+                    }
+
                 default:
                     // For other fields like duration, language selection, etc.
                     return {
@@ -149,6 +238,14 @@ export default async (bahasaNusa, m) => {
             message += '\n\n*Contoh yang baik:*\n• Gedung Kesenian Jakarta\n• Pendopo Kahuripan, Sidoarjo\n• Benteng Vredeburg Yogyakarta\n• Balai Budaya Surabaya';
         } else if (step === 'ask_date_time') {
             message += '\n\n*Contoh yang baik:*\n• 25 November 2024 jam 7 malam\n• Besok jam 19:00\n• 30/12/2024 19:00\n• Minggu depan jam 8 malam';
+        } else if (step === 'ask_duration') {
+            message += '\n\n*Contoh yang baik:*\n• 1 jam setengah\n• 2 jam 15 menit\n• 90 menit\n• Setengah jam';
+        } else if (step === 'ask_language') {
+            message += '\n\n*Contoh yang baik:*\n• 1 (untuk pilihan pertama)\n• Bahasa Jawa\n• Indonesia\n• Jawa';
+        } else if (step === 'ask_payment_model') {
+            message += '\n\n*Contoh yang baik:*\n• 1 (penyelenggara)\n• 2 (penonton)\n• Penyelenggara\n• Penonton';
+        } else if (step === 'konfirmasi_data') {
+            message += '\n\n*Contoh yang baik:*\n• 1 / Ya / Benar / Sudah\n• 2 / Tidak / Perbaiki / Salah';
         }
 
         if (userSession.retryCount >= 3) {
@@ -277,43 +374,52 @@ export default async (bahasaNusa, m) => {
             userSessions.set(sender, userSession);
 
             // Natural flow tanpa menunjukkan proses LLM
-            let durationPrompt = `*Estimasi durasi acara "${userSession.eventData.name}" (dalam menit)?*\n\n_Contoh: 120 (untuk 2 jam), 90 (untuk 1.5 jam)_\n\nℹ️ Waktu acara: ${dateTimeValidation.value}\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`;
+            let durationPrompt = `*Berapa lama estimasi durasi acara "${userSession.eventData.name}"?*\n\nAnda bisa menuliskan dalam bahasa natural:\n• "1 jam setengah"\n• "2 jam 15 menit"\n• "90 menit"\n\nℹ️ Waktu acara: ${dateTimeValidation.value}\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`;
 
             return bahasaNusaReply(durationPrompt);
 
         case 'ask_duration':
-            const duration = parseInt(body);
-            if (isNaN(duration) || duration <= 0) {
-                return bahasaNusaReply(`*Mohon masukkan durasi dalam angka (menit).*\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
+            const durationValidation = await validateAndProcessInput(body, 'ask_duration');
+            
+            if (!durationValidation.isValid) {
+                return handleValidationError(durationValidation, 'ask_duration');
             }
-            userSession.eventData.duration = duration;
+            
+            userSession.eventData.duration = durationValidation.value;
             userSession.step = 'ask_language';
+            userSession.retryCount = 0;
             userSessions.set(sender, userSession);
             // Tampilkan pilihan bahasa
             let langMsg = '*Pilih bahasa yang digunakan untuk audio input:*\n';
             languages.forEach((lang, idx) => {
                 langMsg += `${idx + 1}. ${lang.namaBahasa}\n`;
             });
-            langMsg += '\nKetik angka sesuai pilihan Anda.\n_Contoh: 1_\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".';
+            langMsg += '\nAnda bisa mengetik:\n• Nomor pilihan (contoh: "1")\n• Nama bahasa (contoh: "Bahasa Jawa" atau "Indonesia")\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".';
             return bahasaNusaReply(langMsg);
 
         case 'ask_language':
-            const langIdx = parseInt(body) - 1;
-            if (isNaN(langIdx) || langIdx < 0 || langIdx >= languages.length) {
-                return bahasaNusaReply('Pilihan bahasa tidak valid. Silakan pilih angka yang sesuai.');
+            const languageValidation = await validateAndProcessInput(body, 'ask_language');
+            
+            if (!languageValidation.isValid) {
+                return handleValidationError(languageValidation, 'ask_language');
             }
-            userSession.eventData.kodeBahasa = languages[langIdx].kodeBahasa;
+            
+            userSession.eventData.kodeBahasa = languageValidation.value;
             userSession.step = 'ask_payment_model';
+            userSession.retryCount = 0;
             userSessions.set(sender, userSession);
-            return bahasaNusaReply(`*Siapa yang akan menanggung biaya subtitle?*\n\n1️⃣ Penyelenggara (flat fee)\n2️⃣ Penonton (pay per view)\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
+            return bahasaNusaReply(`*Siapa yang akan menanggung biaya subtitle?*\n\n1️⃣ Penyelenggara (flat fee)\n2️⃣ Penonton (pay per view)\n\nAnda bisa mengetik:\n• Nomor pilihan (contoh: "1" atau "2")\n• Nama pihak (contoh: "Penyelenggara" atau "Penonton")\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
 
         case 'ask_payment_model':
-            if (!['1', '2'].includes(body)) {
-                return bahasaNusaReply(`*Pilihan tidak valid. Silakan pilih:*\n\n1️⃣ Penyelenggara (flat fee)\n2️⃣ Penonton (pay per view)\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
+            const paymentValidation = await validateAndProcessInput(body, 'ask_payment_model');
+            
+            if (!paymentValidation.isValid) {
+                return handleValidationError(paymentValidation, 'ask_payment_model');
             }
-            userSession.eventData.tipePembayaran = body === '1' ? TipePembayaranAcara.PENYELENGGARA : TipePembayaranAcara.PENONTON;
-            userSession.eventData.biayaPenyelenggara = body === '1' ? BIAYA_PENYELENGGARA : 0.0;
-            userSession.eventData.biayaPenonton = body === '2' ? BIAYA_PENONTON : 0.0;
+            
+            userSession.eventData.tipePembayaran = paymentValidation.value;
+            userSession.eventData.biayaPenyelenggara = paymentValidation.value === TipePembayaranAcara.PENYELENGGARA ? BIAYA_PENYELENGGARA : 0.0;
+            userSession.eventData.biayaPenonton = paymentValidation.value === TipePembayaranAcara.PENONTON ? BIAYA_PENONTON : 0.0;
             userSession.eventData.biayaTelahDibayarPenyelenggara = null;
             userSession.eventData.statusPembayaran = 'PENDING';
             userSession.step = 'konfirmasi_data';
@@ -329,15 +435,17 @@ export default async (bahasaNusa, m) => {
                 `*Biaya Penonton:* ${userSession.eventData.biayaPenonton > 0 ? 'Rp ' + userSession.eventData.biayaPenonton.toLocaleString() : '-'}\n` +
                 `*Biaya Penyelenggara:* ${userSession.eventData.biayaPenyelenggara > 0 ? 'Rp ' + userSession.eventData.biayaPenyelenggara.toLocaleString() : '-'}\n\n` +
                 `*Apakah data sudah benar?*
-1️⃣ Sudah benar
-2️⃣ Perbaiki data
 
-Ketik angka sesuai pilihan Anda.`;
+Anda bisa mengetik:
+• "Ya", "Benar", "Sudah", atau "1" untuk konfirmasi
+• "Tidak", "Perbaiki", "Salah", atau "2" untuk revisi`;
             return bahasaNusaReply(recapMsg);
 
         case 'konfirmasi_data':
-            if (['1', '2'].includes(body)) {
-                if (body === '1') {
+            const confirmationValidation = await validateAndProcessInput(body, 'konfirmasi_data');
+            
+            if (confirmationValidation.isValid) {
+                if (confirmationValidation.value) {
                     // Generate event details dan id acara
                     const eventId = cuid();
                     const viewerCode = `${eventId}y`;
@@ -396,12 +504,12 @@ Ketik angka sesuai pilihan Anda.`;
                         `Gunakan password ini untuk login ke dashboard penyelenggara`;
                     userSessions.delete(sender);
                     return bahasaNusaReply(summary);
-                } else if (body === '2') {
+                } else {
                     userSessions.set(sender, { step: 'ask_event_name', eventData: {} });
-                    return bahasaNusaReply('Baik, mari kita mulai dari awal.\n\n*Apa nama acara yang akan diselenggarakan?*\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".');
+                    return bahasaNusaReply('Baik, mari kita mulai dari awal.\n\n*Apa nama acara yang akan diselenggarakan?*\n\n> Untuk pembatalan proses pendaftaran, ketikkan "batal".');
                 }
             } else {
-                return bahasaNusaReply('Pilihan tidak valid. Silakan ketik 1 untuk konfirmasi, atau 2 untuk perbaiki data.');
+                return handleValidationError(confirmationValidation, 'konfirmasi_data');
             }
 
         default:

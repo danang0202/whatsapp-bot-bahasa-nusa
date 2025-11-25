@@ -260,6 +260,150 @@ OUTPUT:`;
   }
 
   /**
+   * Extract duration from natural language input (basic implementation)
+   */
+  async extractDuration(input) {
+    // Basic fallback for Ollama - can be enhanced later
+    const numbers = input.match(/\d+/g);
+    const hasHourWord = /jam|hour/i.test(input);
+    const hasMinuteWord = /menit|minute/i.test(input);
+    
+    if (numbers && numbers.length > 0) {
+      const firstNum = parseInt(numbers[0]);
+      let estimatedMinutes = firstNum;
+      
+      if (hasHourWord && !hasMinuteWord) {
+        estimatedMinutes = firstNum * 60;
+      }
+      
+      const isReasonable = estimatedMinutes >= 15 && estimatedMinutes <= 720;
+      
+      return {
+        success: isReasonable,
+        durationMinutes: isReasonable ? estimatedMinutes : null,
+        confidence: isReasonable ? 0.7 : 0.3,
+        error: isReasonable ? null : 'Durasi tidak dapat dipahami',
+        fallback: true
+      };
+    }
+    
+    return {
+      success: false,
+      durationMinutes: null,
+      confidence: 0.1,
+      error: 'Durasi tidak dapat diproses'
+    };
+  }
+
+  /**
+   * Parse language selection (basic implementation)
+   */
+  async parseLanguageSelection(input, availableLanguages) {
+    const inputLower = input.toLowerCase().trim();
+    
+    // Try number matching first
+    const numberMatch = inputLower.match(/^(\d+)$/);
+    if (numberMatch) {
+      const index = parseInt(numberMatch[1]) - 1;
+      if (index >= 0 && index < availableLanguages.length) {
+        const lang = availableLanguages[index];
+        return {
+          success: true,
+          languageCode: lang.kodeBahasa,
+          languageName: lang.namaBahasa,
+          confidence: 0.9,
+          fallback: true
+        };
+      }
+    }
+    
+    // Try name matching
+    for (const lang of availableLanguages) {
+      const langNameLower = lang.namaBahasa.toLowerCase();
+      if (langNameLower.includes(inputLower) || inputLower.includes(langNameLower.split(' ').pop())) {
+        return {
+          success: true,
+          languageCode: lang.kodeBahasa,
+          languageName: lang.namaBahasa,
+          confidence: 0.8,
+          fallback: true
+        };
+      }
+    }
+    
+    return {
+      success: false,
+      languageCode: null,
+      languageName: null,
+      confidence: 0.1,
+      error: 'Pilihan bahasa tidak dikenali'
+    };
+  }
+
+  /**
+   * Parse payment model selection (basic implementation)
+   */
+  async parsePaymentSelection(input) {
+    const inputLower = input.toLowerCase().trim();
+    
+    if (inputLower === '1' || inputLower.includes('penyelenggara') || inputLower.includes('flat')) {
+      return {
+        success: true,
+        paymentType: 'PENYELENGGARA',
+        confidence: 0.8,
+        fallback: true
+      };
+    } else if (inputLower === '2' || inputLower.includes('penonton') || inputLower.includes('pay per view')) {
+      return {
+        success: true,
+        paymentType: 'PENONTON',
+        confidence: 0.8,
+        fallback: true
+      };
+    }
+    
+    return {
+      success: false,
+      paymentType: null,
+      confidence: 0.1,
+      error: 'Pilihan pembayaran tidak dikenali'
+    };
+  }
+
+  /**
+   * Parse confirmation response (basic implementation)
+   */
+  async parseConfirmation(input) {
+    const inputLower = input.toLowerCase().trim();
+    
+    const positiveWords = ['1', 'ya', 'yes', 'benar', 'sudah', 'oke', 'ok', 'setuju'];
+    const negativeWords = ['2', 'tidak', 'no', 'salah', 'belum', 'perbaiki'];
+    
+    if (positiveWords.some(word => inputLower.includes(word))) {
+      return {
+        success: true,
+        confirmed: true,
+        confidence: 0.8,
+        fallback: true
+      };
+    } else if (negativeWords.some(word => inputLower.includes(word))) {
+      return {
+        success: true,
+        confirmed: false,
+        confidence: 0.8,
+        fallback: true
+      };
+    }
+    
+    return {
+      success: false,
+      confirmed: null,
+      confidence: 0.1,
+      error: 'Konfirmasi tidak dikenali'
+    };
+  }
+
+  /**
    * Validate all event data at once
    */
   async validateEventData(eventName, location, dateTime) {

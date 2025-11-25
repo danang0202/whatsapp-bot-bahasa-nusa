@@ -9,8 +9,10 @@
         "validate": "node validate-env.js",
         "setup": "node validate-env.js && npm run test:llm",
         "test:llm": "node test-llm-factory.js",
+        "test:natural": "node test-natural-language.js",
         "example:llm": "node examples-llm-factory.js",
-        "test:bot": "node test-llm-validation.js"
+        "test:bot": "node test-llm-validation.js",
+        "test:all": "npm run validate && npm run test:llm && npm run test:natural"
     },
     "author": "BahasaNusa",
     "license": "MIT",

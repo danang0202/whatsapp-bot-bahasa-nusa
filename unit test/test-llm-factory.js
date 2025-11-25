@@ -1,4 +1,4 @@
-import LLMFactory from './src/services/llm/llm-factory.js';
+import LLMFactory from '../src/services/llm/llm-factory.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

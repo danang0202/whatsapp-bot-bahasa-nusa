@@ -155,6 +155,111 @@ class LLMFactory {
             }
         }
     }
+
+    /**
+     * Extract duration with fallback providers
+     * @param {string} input - User input
+     * @param {string} provider - Preferred provider
+     * @returns {Object} Extraction result
+     */
+    async extractDuration(input, provider = null) {
+        try {
+            const client = this.getClient(provider);
+            return await client.extractDuration(input);
+        } catch (error) {
+            console.warn(`[LLM] ${provider || this.defaultProvider} failed for duration extraction:`, error.message);
+            
+            // Fallback to other provider
+            const fallbackProvider = provider === 'openai' ? 'ollama' : 'openai';
+            try {
+                const fallbackClient = this.getClient(fallbackProvider);
+                console.log(`[LLM] Trying fallback provider: ${fallbackProvider}`);
+                return await fallbackClient.extractDuration(input);
+            } catch (fallbackError) {
+                console.error(`[LLM] All providers failed for duration extraction`);
+                throw new Error('LLM extraction failed');
+            }
+        }
+    }
+
+    /**
+     * Parse language selection with fallback providers
+     * @param {string} input - User input
+     * @param {Array} availableLanguages - Available language options
+     * @param {string} provider - Preferred provider
+     * @returns {Object} Parse result
+     */
+    async parseLanguageSelection(input, availableLanguages, provider = null) {
+        try {
+            const client = this.getClient(provider);
+            return await client.parseLanguageSelection(input, availableLanguages);
+        } catch (error) {
+            console.warn(`[LLM] ${provider || this.defaultProvider} failed for language parsing:`, error.message);
+            
+            // Fallback to other provider
+            const fallbackProvider = provider === 'openai' ? 'ollama' : 'openai';
+            try {
+                const fallbackClient = this.getClient(fallbackProvider);
+                console.log(`[LLM] Trying fallback provider: ${fallbackProvider}`);
+                return await fallbackClient.parseLanguageSelection(input, availableLanguages);
+            } catch (fallbackError) {
+                console.error(`[LLM] All providers failed for language parsing`);
+                throw new Error('LLM parsing failed');
+            }
+        }
+    }
+
+    /**
+     * Parse payment selection with fallback providers
+     * @param {string} input - User input
+     * @param {string} provider - Preferred provider
+     * @returns {Object} Parse result
+     */
+    async parsePaymentSelection(input, provider = null) {
+        try {
+            const client = this.getClient(provider);
+            return await client.parsePaymentSelection(input);
+        } catch (error) {
+            console.warn(`[LLM] ${provider || this.defaultProvider} failed for payment parsing:`, error.message);
+            
+            // Fallback to other provider
+            const fallbackProvider = provider === 'openai' ? 'ollama' : 'openai';
+            try {
+                const fallbackClient = this.getClient(fallbackProvider);
+                console.log(`[LLM] Trying fallback provider: ${fallbackProvider}`);
+                return await fallbackClient.parsePaymentSelection(input);
+            } catch (fallbackError) {
+                console.error(`[LLM] All providers failed for payment parsing`);
+                throw new Error('LLM parsing failed');
+            }
+        }
+    }
+
+    /**
+     * Parse confirmation with fallback providers
+     * @param {string} input - User input
+     * @param {string} provider - Preferred provider
+     * @returns {Object} Parse result
+     */
+    async parseConfirmation(input, provider = null) {
+        try {
+            const client = this.getClient(provider);
+            return await client.parseConfirmation(input);
+        } catch (error) {
+            console.warn(`[LLM] ${provider || this.defaultProvider} failed for confirmation parsing:`, error.message);
+            
+            // Fallback to other provider
+            const fallbackProvider = provider === 'openai' ? 'ollama' : 'openai';
+            try {
+                const fallbackClient = this.getClient(fallbackProvider);
+                console.log(`[LLM] Trying fallback provider: ${fallbackProvider}`);
+                return await fallbackClient.parseConfirmation(input);
+            } catch (fallbackError) {
+                console.error(`[LLM] All providers failed for confirmation parsing`);
+                throw new Error('LLM parsing failed');
+            }
+        }
+    }
 }
 
 // Export singleton instance
