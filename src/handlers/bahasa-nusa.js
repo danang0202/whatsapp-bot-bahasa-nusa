@@ -1,18 +1,23 @@
 import '../config/config.js';
 import '../ui/menus/bahasa-nusa-menu.js';
-import fs from 'fs';
 import { saveEventToDatabase, saveUserIfNotExists, generatePassword, generateLinks, formatDateTime, getMonthName } from '../helpers/events.js';
 import cuid from 'cuid';
 import { languages } from '../helpers/enums.js';
 import { TipePembayaranAcara, BIAYA_PENYELENGGARA, BIAYA_PENONTON } from '../helpers/enums.js';
+import OllamaClient from '../services/ollama/ollama-client.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // State management untuk user sessions
 const userSessions = new Map();
 
-// Helper functions
-
+// Initialize Ollama client
+const ollama = new OllamaClient();
 
 export default async (bahasaNusa, m) => {
+    // Ambil nomor WhatsApp dari .env
+    const nomorWhatsapp = process.env.NOMOR_WHATSAPP || '6285117656975';
     const msg = m.messages[0];
     if (!msg.message) return;
 
@@ -21,7 +26,145 @@ export default async (bahasaNusa, m) => {
     const pushname = msg.pushName || "BahasaNusa";
 
     // Get user session atau create new
-    const userSession = userSessions.get(sender) || { step: 'welcome', eventData: {} };
+    const userSession = userSessions.get(sender) || { step: 'welcome', eventData: {}, retryCount: 0 };
+
+    // Helper function for LLM validation with retry logic
+    const validateAndProcessInput = async (input, step) => {
+        const ollamaAvailable = await ollama.isAvailable();
+        if (!ollamaAvailable) {
+            console.warn(`[Validation] Ollama not available, using fallback validation for ${step}`);
+            return {
+                isValid: input.trim().length > 2,
+                value: input.trim(),
+                confidence: 0.5,
+                fallback: true,
+                error: input.trim().length > 2 ? null : 'Input terlalu pendek'
+            };
+        }
+
+        try {
+            switch (step) {
+                case 'ask_event_name':
+                    console.log(`[LLM] Extracting event name from: "${input}"`);
+                    const nameResult = await ollama.extractEventName(input);
+
+                    // Check if extraction is meaningful and specific enough
+                    const extractionWorked = nameResult.extracted !== input.trim() || nameResult.confidence > 0.8;
+                    const isSpecificName = nameResult.extracted.length > 5 && !['acara', 'event', 'pertunjukan'].includes(nameResult.extracted.toLowerCase());
+
+                    if (extractionWorked && isSpecificName) {
+                        console.log(`[LLM] ✅ Event name: "${nameResult.extracted}" (${Math.round(nameResult.confidence * 100)}%)`);
+                        return {
+                            isValid: true,
+                            value: nameResult.extracted,
+                            confidence: nameResult.confidence,
+                            originalInput: input
+                        };
+                    } else {
+                        console.log(`[LLM] ❌ Event name extraction failed or unclear`);
+                        return {
+                            isValid: false,
+                            value: input,
+                            confidence: nameResult.confidence,
+                            error: 'Nama acara tidak jelas. Mohon sebutkan nama acara yang lebih spesifik. Contoh: "Wayang Kulit Ramayana" atau "Pertunjukan Tari Kecak"'
+                        };
+                    }
+
+                case 'ask_location':
+                    console.log(`[LLM] Extracting location from: "${input}"`);
+                    const locationResult = await ollama.extractLocation(input);
+
+                    // Check if extraction is meaningful and specific enough
+                    const locationWorked = locationResult.extracted !== input.trim() || locationResult.confidence > 0.8;
+                    const isSpecificLocation = locationResult.extracted.length > 4 && !['sana', 'sini', 'tempat', 'lokasi'].includes(locationResult.extracted.toLowerCase());
+
+                    if (locationWorked && isSpecificLocation) {
+                        console.log(`[LLM] ✅ Location: "${locationResult.extracted}" (${Math.round(locationResult.confidence * 100)}%)`);
+                        return {
+                            isValid: true,
+                            value: locationResult.extracted,
+                            confidence: locationResult.confidence,
+                            originalInput: input
+                        };
+                    } else {
+                        console.log(`[LLM] ❌ Location extraction failed or unclear`);
+                        return {
+                            isValid: false,
+                            value: input,
+                            confidence: locationResult.confidence,
+                            error: 'Lokasi tidak jelas. Mohon sebutkan tempat yang lebih spesifik. Contoh: "Gedung Kesenian Jakarta" atau "Pendopo Kahuripan, Sidoarjo"'
+                        };
+                    }
+
+                case 'ask_date_time':
+                    console.log(`[LLM] Validating datetime from: "${input}"`);
+                    const dateTimeResult = await ollama.validateDateTime(input);
+
+                    if (dateTimeResult.success) {
+                        console.log(`[LLM] ✅ DateTime: "${dateTimeResult.extracted}" (${Math.round(dateTimeResult.confidence * 100)}%)`);
+                        return {
+                            isValid: true,
+                            value: dateTimeResult.extracted,
+                            confidence: dateTimeResult.confidence,
+                            originalInput: input
+                        };
+                    } else {
+                        console.log(`[LLM] ❌ DateTime validation failed: ${dateTimeResult.error}`);
+                        return {
+                            isValid: false,
+                            value: input,
+                            confidence: dateTimeResult.confidence,
+                            error: dateTimeResult.error || 'Format tanggal tidak valid. Contoh: "25 November 2024 jam 7 malam", "besok jam 19:00", atau "30/12/2024 19:00"'
+                        };
+                    }
+
+                default:
+                    // For other fields like duration, language selection, etc.
+                    return {
+                        isValid: input.trim().length > 0,
+                        value: input.trim(),
+                        confidence: 0.9
+                    };
+            }
+        } catch (error) {
+            console.error(`[LLM] Error validating ${step}:`, error);
+            return {
+                isValid: false,
+                value: input,
+                confidence: 0.1,
+                error: 'Terjadi kesalahan saat memproses input. Silakan coba lagi.'
+            };
+        }
+    };
+
+    // Helper function to handle validation errors with retry
+    const handleValidationError = (validation, step) => {
+        userSession.retryCount = (userSession.retryCount || 0) + 1;
+
+        const errorMessage = validation.error || 'Input tidak valid';
+
+        let message = `*Mohon maaf, ada yang perlu diperbaiki*\n\n${errorMessage}`;
+
+        // Add specific examples based on step
+        if (step === 'ask_event_name') {
+            message += '\n\n*Contoh yang baik:*\n• Wayang Kulit Ramayana\n• Pertunjukan Tari Kecak\n• Festival Batik Nusantara\n• Konser Gamelan Jawa';
+        } else if (step === 'ask_location') {
+            message += '\n\n*Contoh yang baik:*\n• Gedung Kesenian Jakarta\n• Pendopo Kahuripan, Sidoarjo\n• Benteng Vredeburg Yogyakarta\n• Balai Budaya Surabaya';
+        } else if (step === 'ask_date_time') {
+            message += '\n\n*Contoh yang baik:*\n• 25 November 2024 jam 7 malam\n• Besok jam 19:00\n• 30/12/2024 19:00\n• Minggu depan jam 8 malam';
+        }
+
+        if (userSession.retryCount >= 3) {
+            message += '\n\n⚠️ *Sudah 3 kali mencoba*\nJika masih kesulitan, ketik "bantuan" untuk panduan lengkap atau "kontak" untuk support.';
+        } else {
+            message += `\n\n🔄 *Percobaan ${userSession.retryCount}/3*\nSilakan coba lagi dengan format yang lebih jelas.`;
+        }
+
+        message += '\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".';
+
+        userSessions.set(sender, userSession);
+        return bahasaNusaReply(message);
+    };
 
     const bahasaNusaReply = (teks) => bahasaNusa.sendMessage(sender, { text: teks }, { quoted: msg });
 
@@ -86,39 +229,60 @@ export default async (bahasaNusa, m) => {
     // Handle flow pendaftaran berdasarkan step
     switch (userSession.step) {
         case 'ask_event_name':
-            userSession.eventData.name = body;
+            const nameValidation = await validateAndProcessInput(body, 'ask_event_name');
+
+            if (!nameValidation.isValid) {
+                return handleValidationError(nameValidation, 'ask_event_name');
+            }
+
+            userSession.eventData.name = nameValidation.value;
+            userSession.eventData.originalNameInput = nameValidation.originalInput || body;
             userSession.step = 'ask_location';
+            userSession.retryCount = 0;
             userSessions.set(sender, userSession);
-            return bahasaNusaReply(`*Lokasi acara "${body}" di mana?*\n\n_Contoh: Gedung Serbaguna, Jakarta_\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
+
+            // Natural flow tanpa menunjukkan proses LLM
+            let response = `*Lokasi acara "${nameValidation.value}" di mana?*\n\n_Contoh: Gedung Kesenian Jakarta, Pendopo Kahuripan Sidoarjo, atau Balai Budaya Surabaya_`;
+            response += '\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".';
+
+            return bahasaNusaReply(response);
 
         case 'ask_location':
-            userSession.eventData.location = body;
+            const locationValidation = await validateAndProcessInput(body, 'ask_location');
+
+            if (!locationValidation.isValid) {
+                return handleValidationError(locationValidation, 'ask_location');
+            }
+
+            userSession.eventData.location = locationValidation.value;
+            userSession.eventData.originalLocationInput = locationValidation.originalInput || body;
             userSession.step = 'ask_date_time';
+            userSession.retryCount = 0;
             userSessions.set(sender, userSession);
-            return bahasaNusaReply(`*Kapan acara ini akan berlangsung?*\nFormat: DD/MM/YYYY HH:MM\n\n_Contoh: 15/12/2024 19:00_\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
+
+            // Natural flow tanpa menunjukkan proses LLM
+            let dateTimePrompt = `*Kapan acara "${userSession.eventData.name}" di ${locationValidation.value} akan berlangsung?*\n\nAnda bisa menuliskan dalam bahasa natural:\n• "25 November 2024 jam 7 malam"\n• "Besok jam 19:00"\n• "30/12/2024 20:00"`;
+            dateTimePrompt += '\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".';
+
+            return bahasaNusaReply(dateTimePrompt);
 
         case 'ask_date_time':
-            const dateTimeMatch = body.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
-            if (!dateTimeMatch) {
-                return bahasaNusaReply(`*Format tanggal dan waktu tidak valid.*\n\nSilakan gunakan format: DD/MM/YYYY HH:MM\n_Contoh: 15/12/2024 19:00_\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
+            const dateTimeValidation = await validateAndProcessInput(body, 'ask_date_time');
+
+            if (!dateTimeValidation.isValid) {
+                return handleValidationError(dateTimeValidation, 'ask_date_time');
             }
-            // Validasi tanggal dan jam tidak boleh lebih awal dari sekarang
-            const [dateStrInput, timeStrInput] = body.split(' ');
-            let [dayInput, monthInput, yearInput] = dateStrInput.split('/');
-            let [hourInput, minuteInput] = timeStrInput.split(':');
-            dayInput = dayInput.padStart(2, '0');
-            monthInput = monthInput.padStart(2, '0');
-            hourInput = hourInput.padStart(2, '0');
-            minuteInput = minuteInput.padStart(2, '0');
-            const inputDate = new Date(`${yearInput}-${monthInput}-${dayInput}T${hourInput}:${minuteInput}:00`);
-            const now = new Date();
-            if (inputDate < now) {
-                return bahasaNusaReply(`*Tanggal dan jam acara tidak boleh lebih awal dari sekarang.*\nSilakan masukkan tanggal dan jam yang valid.\n_Contoh: 15/12/2024 19:00_\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
-            }
-            userSession.eventData.dateTime = body;
+
+            userSession.eventData.dateTime = dateTimeValidation.value;
+            userSession.eventData.originalDateTimeInput = body;
             userSession.step = 'ask_duration';
+            userSession.retryCount = 0;
             userSessions.set(sender, userSession);
-            return bahasaNusaReply(`*Estimasi durasi acara (dalam menit)?*\n_Contoh: 120_\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
+
+            // Natural flow tanpa menunjukkan proses LLM
+            let durationPrompt = `*Estimasi durasi acara "${userSession.eventData.name}" (dalam menit)?*\n\n_Contoh: 120 (untuk 2 jam), 90 (untuk 1.5 jam)_\n\nℹ️ Waktu acara: ${dateTimeValidation.value}\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`;
+
+            return bahasaNusaReply(durationPrompt);
 
         case 'ask_duration':
             const duration = parseInt(body);
