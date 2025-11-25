@@ -22,23 +22,11 @@ export const languages = [
     namaBahasa: "Bahasa Indonesia"
   },
   {
-    kodeBahasa: "en",
-    namaBahasa: "English"
-  },
-  {
-    kodeBahasa: "jv",
+    kodeBahasa: "jw",
     namaBahasa: "Bahasa Jawa"
   },
   {
-    kodeBahasa: "de",
-    namaBahasa: "Deutsch"
+    kodeBahasa: "su",
+    namaBahasa: "Bahasa Sunda"
   },
-  {
-    kodeBahasa: "ja",
-    namaBahasa: "日本語 (Japanese)"
-  },
-  {
-    kodeBahasa: "zh",
-    namaBahasa: "中文 (Chinese)"
-  }
 ];

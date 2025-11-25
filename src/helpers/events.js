@@ -20,9 +20,13 @@ const pool = new Pool({
  * @returns {string}
  */
 export function generatePassword() {
-    const adjectives = ['WAYANG', 'BATIK', 'BUDAYA', 'NUSA', 'SENI'];
-    const years = ['2024', '2025'];
-    return adjectives[Math.floor(Math.random() * adjectives.length)] + years[Math.floor(Math.random() * years.length)];
+    // Generate a random alphanumeric string (8 chars)
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let password = '';
+    for (let i = 0; i < 8; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
 }
 
 /**
@@ -120,38 +124,78 @@ export async function saveUserIfNotExists(userData) {
  * @returns {boolean} - true if saved successfully
  */
 export async function saveEventToDatabase(eventData) {
-    const sql = `
-        INSERT INTO acara (
-            id, nama_acara, lokasi_acara, tanggal_acara, status, tipe_pembayaran, user_id,
-            estimasi_durasi_menit, kode_bahasa, random_viewer_kode, random_penyelenggara_kode,
-            status_pembayaran, biaya_penyelenggara, biaya_telah_dibayar_penyelenggara,
-            biaya_penonton, created_at, updated_at
-        ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7,
-            $8, $9, $10, $11,
-            $12, $13, $14,
-            $15, $16, $17
-        )
-    `;
-    const values = [
-        eventData.id,
-        eventData.nama_acara,
-        eventData.lokasi_acara,
-        eventData.tanggal_acara,
-        eventData.status,
-        eventData.tipe_pembayaran,
-        eventData.user_id,
-        eventData.estimasi_durasi_menit,
-        eventData.kode_bahasa,
-        eventData.random_viewer_kode,
-        eventData.random_penyelenggara_kode,
-        eventData.status_pembayaran,
-        eventData.biaya_penyelenggara,
-        eventData.biaya_telah_dibayar_penyelenggara,
-        eventData.biaya_penonton,
-        eventData.created_at,
-        eventData.updated_at
-    ];
-    await pool.query(sql, values);
-    return true;
+    // Start transaction untuk memastikan konsistensi data
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // Insert ke tabel acara
+        const acaraSql = `
+            INSERT INTO acara (
+                id, nama_acara, lokasi_acara, tanggal_acara, status, tipe_pembayaran, user_id,
+                estimasi_durasi_menit, kode_bahasa, random_viewer_kode, random_penyelenggara_kode,
+                status_pembayaran, biaya_penyelenggara, biaya_telah_dibayar_penyelenggara,
+                biaya_penonton, created_at, updated_at
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7,
+                $8, $9, $10, $11,
+                $12, $13, $14,
+                $15, $16, $17
+            )
+        `;
+        const acaraValues = [
+            eventData.id,
+            eventData.nama_acara,
+            eventData.lokasi_acara,
+            eventData.tanggal_acara,
+            eventData.status,
+            eventData.tipe_pembayaran,
+            eventData.user_id,
+            eventData.estimasi_durasi_menit,
+            eventData.kode_bahasa,
+            eventData.random_viewer_kode,
+            eventData.random_penyelenggara_kode,
+            eventData.status_pembayaran,
+            eventData.biaya_penyelenggara,
+            eventData.biaya_telah_dibayar_penyelenggara,
+            eventData.biaya_penonton,
+            eventData.created_at,
+            eventData.updated_at
+        ];
+        
+        await client.query(acaraSql, acaraValues);
+        
+        // Insert ke tabel acara_bahasa_source
+        const bahasaSourceId = cuid();
+        const bahasaSourceSql = `
+            INSERT INTO acara_bahasa_source (
+                id, acara_id, kode_bahasa, created_at, updated_at
+            ) VALUES (
+                $1, $2, $3, NOW(), NOW()
+            )
+        `;
+        const bahasaSourceValues = [
+            bahasaSourceId,
+            eventData.id,
+            eventData.kode_bahasa
+        ];
+        
+        await client.query(bahasaSourceSql, bahasaSourceValues);
+        
+        // Commit transaction
+        await client.query('COMMIT');
+        
+        console.log(`✅ Event saved: ${eventData.id} with source language: ${eventData.kode_bahasa}`);
+        return true;
+        
+    } catch (error) {
+        // Rollback transaction jika terjadi error
+        await client.query('ROLLBACK');
+        console.error('❌ Error saving event to database:', error);
+        throw error;
+    } finally {
+        // Release client connection
+        client.release();
+    }
 }

@@ -355,7 +355,7 @@ export default async (bahasaNusa, m) => {
             userSessions.set(sender, userSession);
 
             // Natural flow tanpa menunjukkan proses LLM
-            let dateTimePrompt = `*Kapan acara "${userSession.eventData.name}" di ${locationValidation.value} akan berlangsung?*\n\nAnda bisa menuliskan dalam bahasa natural:\n• "25 November 2024 jam 7 malam"\n• "Besok jam 19:00"\n• "30/12/2024 20:00"`;
+            let dateTimePrompt = `*Kapan acara "${userSession.eventData.name}" di ${locationValidation.value} akan berlangsung?*\n\nMohon berikan informasi hari, tanggal, bulan, tahun, dan jam yang lengkap`;
             dateTimePrompt += '\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".';
 
             return bahasaNusaReply(dateTimePrompt);
@@ -374,7 +374,7 @@ export default async (bahasaNusa, m) => {
             userSessions.set(sender, userSession);
 
             // Natural flow tanpa menunjukkan proses LLM
-            let durationPrompt = `*Berapa lama estimasi durasi acara "${userSession.eventData.name}"?*\n\nAnda bisa menuliskan dalam bahasa natural:\n• "1 jam setengah"\n• "2 jam 15 menit"\n• "90 menit"\n\nℹ️ Waktu acara: ${dateTimeValidation.value}\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`;
+            let durationPrompt = `*Berapa lama estimasi durasi acara "${userSession.eventData.name}"?*\n\nℹ️ Waktu acara: ${dateTimeValidation.value}\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`;
 
             return bahasaNusaReply(durationPrompt);
 
@@ -394,7 +394,7 @@ export default async (bahasaNusa, m) => {
             languages.forEach((lang, idx) => {
                 langMsg += `${idx + 1}. ${lang.namaBahasa}\n`;
             });
-            langMsg += '\nAnda bisa mengetik:\n• Nomor pilihan (contoh: "1")\n• Nama bahasa (contoh: "Bahasa Jawa" atau "Indonesia")\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".';
+            langMsg += '\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".';
             return bahasaNusaReply(langMsg);
 
         case 'ask_language':
@@ -408,7 +408,7 @@ export default async (bahasaNusa, m) => {
             userSession.step = 'ask_payment_model';
             userSession.retryCount = 0;
             userSessions.set(sender, userSession);
-            return bahasaNusaReply(`*Siapa yang akan menanggung biaya subtitle?*\n\n1️⃣ Penyelenggara (flat fee)\n2️⃣ Penonton (pay per view)\n\nAnda bisa mengetik:\n• Nomor pilihan (contoh: "1" atau "2")\n• Nama pihak (contoh: "Penyelenggara" atau "Penonton")\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
+            return bahasaNusaReply(`*Siapa yang akan menanggung biaya subtitle?*\n\n1️⃣ Penyelenggara (flat fee)\n2️⃣ Penonton (pay per view)\n\n> Untuk membatalkan proses pendaftaran, ketikkan "batal".`);
 
         case 'ask_payment_model':
             const paymentValidation = await validateAndProcessInput(body, 'ask_payment_model');
@@ -437,8 +437,8 @@ export default async (bahasaNusa, m) => {
                 `*Apakah data sudah benar?*
 
 Anda bisa mengetik:
-• "Ya", "Benar", "Sudah", atau "1" untuk konfirmasi
-• "Tidak", "Perbaiki", "Salah", atau "2" untuk revisi`;
+1️⃣ Sudah benar
+2️⃣ Salah, perlu mengulang`;
             return bahasaNusaReply(recapMsg);
 
         case 'konfirmasi_data':
@@ -489,7 +489,7 @@ Anda bisa mengetik:
                     });
                     // Final summary
                     const summary = `🎉 *Sempuarna. Acara Berhasil Didaftarkan!*\n\n` +
-                        `* Nama Acara:* ${userSession.eventData.name}\n` +
+                        `*Nama Acara:* ${userSession.eventData.name}\n` +
                         `*Lokasi:* ${userSession.eventData.location}\n` +
                         `*Waktu:* ${userSession.eventData.dateTime}\n` +
                         `*Durasi:* ${userSession.eventData.duration} menit\n` +

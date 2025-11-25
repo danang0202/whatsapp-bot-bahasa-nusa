@@ -293,7 +293,7 @@ Contoh input yang valid:
                 success: hasDatePattern,
                 extracted: input.trim(),
                 confidence: hasDatePattern ? 0.5 : 0.1,
-                error: hasDatePattern ? null : 'Format tanggal tidak dikenali',
+                error: hasDatePattern ? null : 'Format tanggal dan jam tidak dikenali',
                 fallback: true
             };
         }
