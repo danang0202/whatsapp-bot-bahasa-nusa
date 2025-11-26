@@ -87,13 +87,18 @@ export async function saveUserIfNotExists(userData) {
     // Cek apakah user sudah ada
     const checkSql = 'SELECT * FROM "user" WHERE no_hp = $1';
     const checkResult = await pool.query(checkSql, [userData.noHp]);
-    if (checkResult.rows.length > 0) {
-        return checkResult.rows[0];
-    }
-
-    // Hash password dashboard dengan bcrypt
     const passwordHash = await hashPassword(userData.password);
 
+    if (checkResult.rows.length > 0) {        
+        const updateSql = `
+            UPDATE "user" 
+            SET password_hash = $1, updated_at = NOW()
+            WHERE no_hp = $2
+            RETURNING *
+        `;
+        const updateResult = await pool.query(updateSql, [passwordHash, userData.noHp]);
+        return updateResult.rows[0];
+    }
     // Generate cuid untuk id
     const userId = cuid();
 
