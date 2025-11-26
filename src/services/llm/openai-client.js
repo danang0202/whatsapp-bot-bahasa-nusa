@@ -59,7 +59,7 @@ ATURAN:
 3. Hindari nama generik seperti "acara", "event", "pertunjukan" saja
 4. Prioritaskan nama yang mencerminkan jenis seni/budaya
 
-Response harus dalam format JSON murni tanpa markdown:
+Response harus dalam format JSON murni tanpa markdown, contoh:
 {
   "extracted": "nama acara yang diekstrak",
   "confidence": 0.9,
@@ -144,7 +144,7 @@ ATURAN:
 3. Hindari kata umum seperti "sana", "sini", "tempat", "lokasi"
 4. Prioritaskan venue budaya/seni
 
-Response harus dalam format JSON murni tanpa markdown:
+Response harus dalam format JSON murni tanpa markdown, contoh:
 {
   "extracted": "nama tempat yang diekstrak",
   "confidence": 0.9,
@@ -233,7 +233,7 @@ ATURAN:
 4. Waktu "malam" = +12 jam jika < 12
 5. Minimal tanggal harus hari ini atau masa depan
 
-Response harus dalam format JSON murni tanpa markdown:
+Response harus dalam format JSON murni tanpa markdown, contoh:
 {
   "success": true,
   "extracted": "DD/MM/YYYY HH:MM",
@@ -318,7 +318,7 @@ ATURAN:
 3. Setengah jam = 30 menit, seperempat jam = 15 menit
 4. Durasi minimal 15 menit, maksimal 720 menit (12 jam)
 
-Response harus dalam format JSON murni tanpa markdown:
+Response harus dalam format JSON murni tanpa markdown, contoh:
 {
   "success": true,
   "durationMinutes": 90,
@@ -424,7 +424,7 @@ ATURAN:
 3. Handle variasi nama: "jawa"/"bahasa jawa", "indonesia"/"bahasa indonesia"
 4. Handle nomor: "1", "2", "3", dll
 
-Response harus dalam format JSON murni tanpa markdown:
+Response harus dalam format JSON murni tanpa markdown, contoh:
 {
   "success": true,
   "languageCode": "jv",
@@ -521,8 +521,8 @@ Response harus dalam format JSON murni tanpa markdown:
 INPUT: "${input}"
 
 PILIHAN TERSEDIA:
-1. Penyelenggara (flat fee) - penyelenggara menanggung biaya
-2. Penonton (pay per view) - penonton bayar per view
+1. PENYELENGGARA (penyelenggara menanggung biaya)
+2. PENONTON (penonton bayar per view)
 
 ATURAN:
 1. Cocokkan input dengan pilihan yang tersedia
@@ -535,7 +535,10 @@ Response harus dalam format JSON murni tanpa markdown:
   "paymentType": "PENYELENGGARA",
   "confidence": 0.9,
   "reasoning": "penjelasan matching"
-}`;
+}
+
+payment type selalu antara PENYELENGGARA atau PENONTON
+`;
 
             const result = await generateText({
                 model: this.model,

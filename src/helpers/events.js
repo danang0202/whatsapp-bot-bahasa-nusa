@@ -35,7 +35,7 @@ export function generatePassword() {
  * @returns {{audioInput: string, viewerSubtitle: string}}
  */
 export function generateLinks(eventId) {
-    const baseUrl = 'https://bahasa-nusa.vercel.app';
+    const baseUrl = 'https://bahasa-nusa.ekoptra.com';
     return {
         audioInput: `${baseUrl}/s/${eventId}w`,
         viewerSubtitle: `${baseUrl}/v/${eventId}y`

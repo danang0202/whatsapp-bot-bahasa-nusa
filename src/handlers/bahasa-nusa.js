@@ -488,7 +488,7 @@ Anda bisa mengetik:
                         updated_at: new Date()
                     });
                     // Final summary
-                    const summary = `🎉 *Sempuarna. Acara Berhasil Didaftarkan!*\n\n` +
+                    const summary = `🎉 *Sempurna. Acara Berhasil Didaftarkan!*\n` +
                         `*Nama Acara:* ${userSession.eventData.name}\n` +
                         `*Lokasi:* ${userSession.eventData.location}\n` +
                         `*Waktu:* ${userSession.eventData.dateTime}\n` +
@@ -501,7 +501,8 @@ Anda bisa mengetik:
                         `🎤 *Audio Input (Penyelenggara)*\n${links.audioInput}\n\n` +
                         `👁️ *Viewer Subtitle (Penonton)*\n${links.viewerSubtitle}\n\n` +
                         `🔐 *Password Dashboard:*\n*${password}*\n\n` +
-                        `Gunakan password ini untuk login ke dashboard penyelenggara`;
+                        `🌐 *Dashboard Penyelenggara:*\nhttps://bahasa-nusa.ekoptra.com/dashboard\n\n` +
+                        `Gunakan password ini untuk login ke halaman input audio dan dashboard penyelenggara`;
                     userSessions.delete(sender);
                     return bahasaNusaReply(summary);
                 } else {
